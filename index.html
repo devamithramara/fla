@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Multi‑Dimensional Turing Machine — Explanation & Simulation</title>
+  <style>
+    body{font-family:'Poppins',sans-serif; margin:0; padding:0; background:#f5f7fa; color:#333;}
+    .wrap{max-width:1100px;margin:40px auto;padding:30px;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,0.1);border-radius:12px;}
+    header{display:flex;align-items:center;gap:20px;}
+    .logo{width:60px;height:60px;background:linear-gradient(135deg,#ff7eb3,#ff758c);color:#fff;font-size:1.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+    h1{margin:0;font-size:1.8rem;color:#222;}
+    p.lead{color:#555;font-size:1rem;margin-top:5px;}
+
+    .card{background:#fafafa;padding:20px;border-radius:10px;margin-bottom:20px;border:1px solid #e0e0e0;}
+    .section-title h2{margin:0;font-size:1.2rem;color:#444;}
+    .muted{color:#666;}
+
+    button{background:#007bff;color:#fff;padding:10px 15px;border:none;border-radius:8px;cursor:pointer;transition:0.3s ease;}
+    button:hover{background:#0056b3;}
+
+    input[type=number]{padding:8px;border:1px solid #ccc;border-radius:6px;width:80px;}
+    .note{background:#eef1f5;padding:10px;border-radius:8px;margin-top:10px;}
+
+    pre{background:#272822;color:#f8f8f2;padding:15px;border-radius:6px;overflow:auto;}
+
+    footer{text-align:center;margin-top:30px;color:#777;font-size:0.9rem;}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="logo">MD</div>
+      <div>
+        <h1>Multi‑Dimensional Turing Machine — Working & Simulation by a Standard TM</h1>
+        <p class="lead">Clear explanation, formal construction, step‑by‑step reduction from k‑dimensional tape to a 1‑dimensional standard Turing machine, and a tiny interactive demo (2D ↔ 1D mapping).</p>
+      </div>
+    </header>
+
+    <div class="grid" style="margin-top:20px">
+      <section class="card">
+        <div class="section-title"><h2>1. What is a Multi‑Dimensional Turing Machine?</h2></div>
+        <p class="muted">A multi‑dimensional Turing machine (MDTM) is like a standard Turing machine but its tape is a lattice in \(\mathbb{Z}^k\) rather than a single infinite line. Each cell is addressed by a k‑tuple of integers (e.g., for 2D, coordinates (x,y)). The head is located at one lattice point and at each step it can move in any of the 2k axis directions (up/down, left/right, forward/back, ...), read and write a symbol, and change state.</p>
+
+        <div style="margin-top:12px">
+          <div class="section-title"><h2>Formal model (informal)</h2></div>
+          <p class="muted">A k‑dimensional TM is a tuple \(M= (Q,\Sigma,\Gamma,\delta,q_0,q_{accept},q_{reject})\) where \(\delta:\;Q\times\Gamma\to Q\times\Gamma\times D\). Here \(D=\{\pm e_1,\ldots,\pm e_k,\text{stay}\}\) denotes moves along coordinate axes (e.g., \(+e_1\) moves one step in the first coordinate).</p>
+
+          <div style="margin-top:8px">
+            <strong>Key observations:</strong>
+            <ul style="color:var(--muted)">
+              <li>Cells are indexed by integer k‑tuples and initially only finitely many contain non‑blank symbols.</li>
+              <li>The machine's head moves by incrementing/decrementing one coordinate per step (or staying).</li>
+              <li>Computation power: MDTM ≡ standard TM (they are equally powerful) — we can simulate one with the other.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="section-title"><h2>2. Intuition for simulation</h2></div>
+          <p class="muted">We need a standard 1‑tape (or multi‑tape) TM that simulates the k‑dimensional geometry. The main idea is to encode the k‑dimensional lattice into a single tape using a reversible, computable bijection between \(\mathbb{Z}^k\) and \(\mathbb{Z}\) (or between finite coordinates and tape cells) and to store the head position and tape contents using that encoding.</p>
+
+          <ol style="color:var(--muted)">
+            <li>Choose a mapping (e.g., row‑major ordering if we restrict to a large bounding box, or a pairing/diagonalization scheme for full \(\mathbb{Z}^k\)).</li>
+            <li>Represent each non‑blank cell as a pair \(\langle index, symbol\rangle\) on the 1D tape. Keep the active head's index in the control area of the tape or encoded specially.</li>
+            <li>To move the simulated head in direction \(+e_i\) or \(-e_i\), compute the target index, find the corresponding cell record, update the symbol and the stored head index.
+            </li>
+            <li>All these operations are computable by a standard TM — so simulation is possible (though with overhead in time and space).</li>
+          </ol>
+
+          <div style="margin-top:8px">
+            <strong>Common encodings:</strong>
+            <ul style="color:var(--muted)">
+              <li><em>Row‑major (bounded grids)</em>: Treat k‑D as a big array (use when input uses a finite bounding box).</li>
+              <li><em>Cantor pairing / diagonalization</em>: Map \(\mathbb{Z}^k\) ↔ \(\mathbb{Z}\) using pairing functions (useful for infinite lattice simulation).</li>
+              <li><em>Sparse dictionary</em>: Store only the non‑blank cells as pairs separated by markers; searching for a cell uses linear or binary search (tradeoff: space vs time).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="section-title"><h2>3. Exact simulation schema (high level)</h2></div>
+          <p class="muted">We present a 1‑tape simulation idea that is easy to implement conceptually. For clarity we describe 2D → 1D (k=2) and indicate how to generalize.</p>
+
+          <pre><code>// Data layout on the 1D tape (conceptual):
+#HEADER#  HEAD_POS  #SEPARATOR#  CELL_RECORDS
+Where HEAD_POS is an encoding of coordinates (x,y).
+CELL_RECORD := &lt;ENCODED_INDEX&gt;:SYMBOL;
+Example record: 5,2:A;  (index 5, subindex 2, symbol A)
+
+// Simulation step to move right (x+1):
+1. Read HEAD_POS = (x,y). Compute (x+1,y) -> index'.
+2. Scan CELL_RECORDS to find index'. If found, use its symbol; else assume blank.
+3. Apply transition: write new symbol into that record (or append new record) and update HEAD_POS=index'.
+4. Continue.
+</code></pre>
+
+          <p class="muted"><strong>Complexity note:</strong> Using naive scan of records gives polynomial/linear overhead per simulated step depending on data structure. With clever indexing (multi‑tape or indexed layout) you can reduce the overhead to logarithmic factors — but simulation is always possible.</p>
+
+          <div style="margin-top:12px" class="note">Tip: To prove equivalence formally, you show how to convert MDTM transition function into a TM that updates encoded head position and tape cells mechanically. The reverse simulation (standard TM simulated by MDTM) is immediate by embedding the 1D tape as one row of the k‑D lattice.</div>
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="section-title"><h2>4. Formal reduction sketch (2D → 1D using pairing)</h2></div>
+          <p class="muted">Use Cantor pairing for nonnegative integers:
+\(\pi(a,b)=\frac{(a+b)(a+b+1)}{2}+b\). Extend to \(\mathbb{Z}\) by mapping negatives with a simple bijection (e.g., map n ↦ 2n for n≥0 and n ↦ -2n-1 for n&lt;0). Compose these to get an index for (x,y). The simulator keeps a list of (index,symbol) entries and the encoded head index.</p>
+
+          <pre><code> // High level correctness argument:
+Each MDTM step depends only on state and contents of current cell.
+Simulator can compute index of neighbor deterministically, locate the record for that index, and update it. Therefore every MDTM step is simulated by a finite sequence of TM steps — so the language recognized is identical.
+</code></pre>
+
+        </div>
+
+        <div style="margin-top:14px">
+          <div class="section-title"><h2>5. Practical choices & optimizations</h2></div>
+          <ul style="color:var(--muted)">
+            <li><strong>Sparse encoding:</strong> store only nonblank cells; use separators and keep sorted by index for faster binary search.</li>
+            <li><strong>Multi‑tape TM:</strong> simulate MDTM faster: one tape holds index→symbol map; another tape holds head coordinates — multi‑tape reduces overhead.</li>
+            <li><strong>Bounded inputs:</strong> if the input only uses a finite box, prefer row‑major mapping and direct addressing.</li>
+            <li><strong>Space/time tradeoff:</strong> denser encodings use more space but reduce scanning time; sparse encodings save space but need lookups.</li>
+          </ul>
+        </div>
+
+      </section>
+
+      <aside class="card">
+        <div class="section-title"><h2>Interactive demo — 2D ↔ 1D mapping</h2></div>
+        <p class="muted">Pick small integer coordinates (x,y) to see the Cantor pairing index and the inverse. This demonstrates how a 2D address becomes a 1D tape position.</p>
+
+        <div style="margin-top:10px">
+          <label class="muted">x: <input id="x" type="number" value="0"></label>
+          <label class="muted">y: <input id="y" type="number" value="0"></label>
+          <div class="controls">
+            <button id="encodeBtn">Encode → index</button>
+            <button id="decodeBtn">Decode index → (x,y)</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="note">Index: <span id="indexOut">0</span></div>
+            <div class="note" style="margin-top:8px">Decoded: <span id="decodedOut">(0,0)</span></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="section-title"><h2>Example 1: row‑major (bounded box)</h2></div>
+            <pre><code>index = (y - y0) * width + (x - x0)</code></pre>
+            <div class="muted">Use when you know bounds [x0..x1]×[y0..y1]. Direct and fast to compute.</div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="section-title"><h2>Example 2: Cantor pairing (unbounded)</h2></div>
+            <pre><code>pair(a,b) = ((a+b)*(a+b+1))/2 + b</code></pre>
+            <div class="muted">Extend integers to naturals via signed↔natural bijection then pair. The result is a unique nonnegative index.</div>
+          </div>
+
+        </div>
+
+      </aside>
+    </div>
+
+    <div style="margin-top:18px" class="card">
+      <div class="section-title"><h2>6. Concrete example (simulate one MDTM step)</h2></div>
+      <p class="muted">Suppose a 2D TM at position (3,2) with symbol 'a' and rule: if in state q and see 'a', write 'b' and move right (x+1) to state q'. Simulator steps:</p>
+      <ol style="color:var(--muted)">
+        <li>Read encoded HEAD_POS = encode(3,2) (stored in header).</li>
+        <li>Compute encode(4,2).
+        <li>Search record list for that index; if missing treat as blank.</li>
+        <li>Write or update the record for encode(3,2) to 'b'. Update HEAD_POS to encode(4,2) and current state to q'.</li>
+      </ol>
+      <p class="muted">Each arithmetic and search operation is implementable on a standard TM (binary increments, comparisons, scanning) so the 1D TM can carry out all steps.</p>
+    </div>
+
+    <script>
+      // Simple Cantor pairing demo + signed mapping
+      function toNat(n){ // Z -> N bijection
+        n = Number(n);
+        if (n >= 0) return 2*n;
+        return -2*n - 1;
+      }
+      function fromNat(z){ // N -> Z inverse
+        z = Number(z);
+        if (z % 2 === 0) return z/2;
+        return -((z+1)/2);
+      }
+      function pair(a,b){
+        a = Number(a); b = Number(b);
+        var s = a + b;
+        return (s*(s+1))/2 + b;
+      }
+      function unpair(z){
+        z = Number(z);
+        var w = Math.floor((Math.sqrt(8*z+1)-1)/2);
+        var t = (w*(w+1))/2;
+        var b = z - t;
+        var a = w - b;
+        return [a,b];
+      }
+
+      function encodeXY(x,y){
+        var ax = toNat(x), ay = toNat(y);
+        return pair(ax,ay);
+      }
+      function decodeIndex(idx){
+        var p = unpair(idx);
+        var ax = p[0], ay = p[1];
+        return [fromNat(ax), fromNat(ay)];
+      }
+
+      document.getElementById('encodeBtn').addEventListener('click', ()=>{
+        var x = Number(document.getElementById('x').value);
+        var y = Number(document.getElementById('y').value);
+        var idx = encodeXY(x,y);
+        document.getElementById('indexOut').textContent = idx;
+        document.getElementById('decodedOut').textContent = '('+decodeIndex(idx)+')';
+      });
+      document.getElementById('decodeBtn').addEventListener('click', ()=>{
+        var z = Number(document.getElementById('indexOut').textContent || 0);
+        var d = decodeIndex(z);
+        document.getElementById('decodedOut').textContent = '('+d[0]+','+d[1]+')';
+      });
+
+      // initialize
+      document.getElementById('encodeBtn').click();
+    </script>
+
+    <footer>Made with ❤️ — formal idea: encode k‑tuples to 1D, store cells and head index, update deterministically; both models are equivalent in expressive power.</footer>
+  </main>
+</body>
+</html>
